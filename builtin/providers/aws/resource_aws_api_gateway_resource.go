@@ -60,7 +60,6 @@ func resourceAwsApiGatewayResourceCreate(d *schema.ResourceData, meta interface{
 		return fmt.Errorf("Error creating API Gateway Resource: %s", err)
 	}
 
-	// Get the ID and store it
 	ig := *resp
 	d.SetId(*ig.Id)
 	d.Set("path", resp.Path)
