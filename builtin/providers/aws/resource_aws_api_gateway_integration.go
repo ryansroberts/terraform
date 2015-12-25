@@ -48,9 +48,20 @@ func resourceAwsApiGatewayIntegration() *schema.Resource {
 				Optional: true,
 			},
 
+			"credentials": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+
 			"integration_http_method": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+			},
+
+			"request_templates": &schema.Schema{
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem:     schema.TypeString,
 			},
 		},
 	}
@@ -67,6 +78,15 @@ func resourceAwsApiGatewayIntegrationCreate(d *schema.ResourceData, meta interfa
 	if v, ok := d.GetOk("uri"); ok {
 		uri = aws.String(v.(string))
 	}
+	templates := make(map[string]string)
+	for k, v := range d.Get("request_templates").(map[string]interface{}) {
+		templates[k] = v.(string)
+	}
+
+	var credentials *string
+	if val, ok := d.GetOk("credentials"); ok {
+		credentials = aws.String(val.(string))
+	}
 
 	_, err := conn.PutIntegration(&apigateway.PutIntegrationInput{
 		HttpMethod: aws.String(d.Get("http_method").(string)),
@@ -76,8 +96,8 @@ func resourceAwsApiGatewayIntegrationCreate(d *schema.ResourceData, meta interfa
 		IntegrationHttpMethod: integrationHttpMethod,
 		Uri:                uri,
 		RequestParameters:  nil,
-		RequestTemplates:   nil,
-		Credentials:        nil,
+		RequestTemplates:   aws.StringMap(templates),
+		Credentials:        credentials,
 		CacheNamespace:     nil,
 		CacheKeyParameters: nil,
 	})
@@ -86,7 +106,6 @@ func resourceAwsApiGatewayIntegrationCreate(d *schema.ResourceData, meta interfa
 	}
 
 	d.SetId(fmt.Sprintf("%s-%s-%s", d.Get("api_id").(string), d.Get("resource_id").(string), d.Get("http_method").(string)))
-	log.Printf("[DEBUG] API Gateway Method ID: %s", d.Id())
 
 	return nil
 }
@@ -106,6 +125,11 @@ func resourceAwsApiGatewayIntegrationRead(d *schema.ResourceData, meta interface
 	}
 	log.Printf("[DEBUG] Received API Gateway Method: %s", out)
 	d.SetId(fmt.Sprintf("%s-%s-%s", d.Get("api_id").(string), d.Get("resource_id").(string), d.Get("http_method").(string)))
+
+	d.Set("request_templates", aws.StringValueMap(out.RequestTemplates))
+	d.Set("credentials", aws.StringValue(out.Credentials))
+	d.Set("type", aws.StringValue(out.Type))
+	d.Set("uri", aws.StringValue(out.Uri))
 
 	return nil
 }

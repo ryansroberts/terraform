@@ -53,12 +53,6 @@ func resourceAwsApiGatewayIntegrationResponse() *schema.Resource {
 				Optional: true,
 				Elem:     schema.TypeString,
 			},
-
-			"response_parameters": &schema.Schema{
-				Type:     schema.TypeMap,
-				Optional: true,
-				Elem:     schema.TypeString,
-			},
 		},
 	}
 }
@@ -71,18 +65,13 @@ func resourceAwsApiGatewayIntegrationResponseCreate(d *schema.ResourceData, meta
 		templates[k] = v.(string)
 	}
 
-	parameters := make(map[string]string)
-	for k, v := range d.Get("response_parameters").(map[string]interface{}) {
-		parameters[fmt.Sprintf("method.response.header.%s", k)] = v.(string)
-	}
-
 	_, err := conn.PutIntegrationResponse(&apigateway.PutIntegrationResponseInput{
 		HttpMethod:         aws.String(d.Get("http_method").(string)),
 		ResourceId:         aws.String(d.Get("resource_id").(string)),
 		RestApiId:          aws.String(d.Get("api_id").(string)),
 		StatusCode:         aws.String(d.Get("status_code").(string)),
 		ResponseTemplates:  aws.StringMap(templates),
-		ResponseParameters: aws.StringMap(parameters),
+		ResponseParameters: nil,
 	})
 	if err != nil {
 		return fmt.Errorf("Error creating API Gateway Method Response: %s", err)

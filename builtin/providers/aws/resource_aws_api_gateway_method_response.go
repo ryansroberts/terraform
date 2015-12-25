@@ -49,12 +49,6 @@ func resourceAwsApiGatewayMethodResponse() *schema.Resource {
 				Optional: true,
 				Elem:     schema.TypeString,
 			},
-
-			"response_parameters": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-			},
 		},
 	}
 }
@@ -67,21 +61,13 @@ func resourceAwsApiGatewayMethodResponseCreate(d *schema.ResourceData, meta inte
 		models[k] = v.(string)
 	}
 
-	parameters := make(map[string]bool)
-	if parameterData, ok := d.GetOk("response_parameters"); ok {
-		params := parameterData.(*schema.Set).List()
-		for k := range params {
-			parameters[params[k].(string)] = true
-		}
-	}
-
 	_, err := conn.PutMethodResponse(&apigateway.PutMethodResponseInput{
 		HttpMethod:         aws.String(d.Get("http_method").(string)),
 		ResourceId:         aws.String(d.Get("resource_id").(string)),
 		RestApiId:          aws.String(d.Get("api_id").(string)),
 		StatusCode:         aws.String(d.Get("status_code").(string)),
 		ResponseModels:     aws.StringMap(models),
-		ResponseParameters: aws.BoolMap(parameters),
+		ResponseParameters: nil,
 	})
 	if err != nil {
 		return fmt.Errorf("Error creating API Gateway Method Response: %s", err)
@@ -149,43 +135,6 @@ func resourceAwsApiGatewayMethodResponseUpdate(d *schema.ResourceData, meta inte
 					Op:    aws.String("add"),
 					Path:  aws.String(fmt.Sprintf("/responseModels/%s", strings.Replace(nK, "/", "~1", -1))),
 					Value: aws.String(nV.(string)),
-				}
-				operations = append(operations, &operation)
-			}
-		}
-	}
-
-	if d.HasChange("response_parameters") {
-		o, n := d.GetChange("response_parameters")
-		oP := o.(*schema.Set).List()
-		oN := n.(*schema.Set).List()
-
-		for oK := range oP {
-			operation := apigateway.PatchOperation{
-				Op:   aws.String("remove"),
-				Path: aws.String(fmt.Sprintf("/responseParameters/%s", oP[oK].(string))),
-			}
-
-			for nK := range oN {
-				if oP[oK].(string) == oN[nK].(string) {
-					operation.Op = aws.String("replace")
-					operation.Value = aws.String(oN[oK].(string))
-				}
-			}
-			operations = append(operations, &operation)
-		}
-
-		for nK := range oN {
-			exists := false
-			for oK := range oP {
-				if oP[oK].(string) == oN[oK].(string) {
-					exists = true
-				}
-			}
-			if !exists {
-				operation := apigateway.PatchOperation{
-					Op:   aws.String("add"),
-					Path: aws.String(fmt.Sprintf("/responseParameters/%s", oN[nK].(string))),
 				}
 				operations = append(operations, &operation)
 			}
