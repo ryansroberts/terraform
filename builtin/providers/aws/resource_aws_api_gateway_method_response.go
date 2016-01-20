@@ -3,6 +3,7 @@ package aws
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -70,7 +71,8 @@ func resourceAwsApiGatewayMethodResponseCreate(d *schema.ResourceData, meta inte
 	if d.Get("response_headers") != nil {
 		v := d.Get("response_headers").(map[string]interface{})
 		for k, t := range v {
-			headers["method.response.header."+k] = (t).(bool)
+			t, _ = strconv.ParseBool((t).(string))
+			headers["method.response.header."+k] = t.(bool)
 		}
 	}
 

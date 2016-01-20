@@ -99,8 +99,12 @@ func resourceAwsApiGatewayModelRead(d *schema.ResourceData, meta interface{}) er
 	}
 	log.Printf("[DEBUG] Received API Gateway  Resource: %s", out)
 	d.SetId(*out.Id)
-	d.Set("description", *out.Description)
-	d.Set("schema", *out.Schema)
+	if out.Description != nil {
+		d.Set("description", *out.Description)
+	}
+	if out.Schema != nil {
+		d.Set("schema", *out.Schema)
+	}
 	d.Set("content_type", *out.ContentType)
 
 	return nil
