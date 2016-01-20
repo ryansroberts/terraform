@@ -49,6 +49,11 @@ func resourceAwsApiGatewayMethodResponse() *schema.Resource {
 				Optional: true,
 				Elem:     schema.TypeString,
 			},
+			"response_headers": &schema.Schema{
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem:     schema.TypeBool,
+			},
 		},
 	}
 }
@@ -61,13 +66,21 @@ func resourceAwsApiGatewayMethodResponseCreate(d *schema.ResourceData, meta inte
 		models[k] = v.(string)
 	}
 
+	headers := make(map[string]bool)
+	if d.Get("response_headers") != nil {
+		v := d.Get("response_headers").(map[string]interface{})
+		for k, t := range v {
+			headers["method.response.header."+k] = (t).(bool)
+		}
+	}
+
 	_, err := conn.PutMethodResponse(&apigateway.PutMethodResponseInput{
 		HttpMethod:         aws.String(d.Get("http_method").(string)),
 		ResourceId:         aws.String(d.Get("resource_id").(string)),
 		RestApiId:          aws.String(d.Get("api_id").(string)),
 		StatusCode:         aws.String(d.Get("status_code").(string)),
 		ResponseModels:     aws.StringMap(models),
-		ResponseParameters: nil,
+		ResponseParameters: aws.BoolMap(headers),
 	})
 	if err != nil {
 		return fmt.Errorf("Error creating API Gateway Method Response: %s", err)
@@ -103,16 +116,23 @@ func resourceAwsApiGatewayMethodResponseUpdate(d *schema.ResourceData, meta inte
 
 	log.Printf("[DEBUG] Reading API Gateway Method %s", d.Id())
 	operations := make([]*apigateway.PatchOperation, 0)
+	if o, n := d.GetChange("resource_id"); o.(string) != n.(string) {
+		operations = append(operations, &apigateway.PatchOperation{
+			Op:    aws.String("replace"),
+			Path:  aws.String("/resourceId"),
+			Value: aws.String(d.Get("resource_id").(string)),
+		})
+	}
 
-	if d.HasChange("response_models") {
-		o, n := d.GetChange("response_models")
+	if d.HasChange("request_models") {
+		o, n := d.GetChange("request_models")
 		oP := o.(map[string]interface{})
 		oN := n.(map[string]interface{})
 
 		for k, _ := range oP {
 			operation := apigateway.PatchOperation{
 				Op:   aws.String("remove"),
-				Path: aws.String(fmt.Sprintf("/responseModels/%s", strings.Replace(k, "/", "~1", -1))),
+				Path: aws.String(fmt.Sprintf("/requestModels/%s", strings.Replace(k, "/", "~1", -1))),
 			}
 			for nK, nV := range oN {
 				if nK == k {
@@ -133,7 +153,7 @@ func resourceAwsApiGatewayMethodResponseUpdate(d *schema.ResourceData, meta inte
 			if !exists {
 				operation := apigateway.PatchOperation{
 					Op:    aws.String("add"),
-					Path:  aws.String(fmt.Sprintf("/responseModels/%s", strings.Replace(nK, "/", "~1", -1))),
+					Path:  aws.String(fmt.Sprintf("/requestModels/%s", strings.Replace(nK, "/", "~1", -1))),
 					Value: aws.String(nV.(string)),
 				}
 				operations = append(operations, &operation)
@@ -141,11 +161,10 @@ func resourceAwsApiGatewayMethodResponseUpdate(d *schema.ResourceData, meta inte
 		}
 	}
 
-	out, err := conn.UpdateMethodResponse(&apigateway.UpdateMethodResponseInput{
+	out, err := conn.UpdateMethod(&apigateway.UpdateMethodInput{
 		HttpMethod:      aws.String(d.Get("http_method").(string)),
 		ResourceId:      aws.String(d.Get("resource_id").(string)),
 		RestApiId:       aws.String(d.Get("api_id").(string)),
-		StatusCode:      aws.String(d.Get("status_code").(string)),
 		PatchOperations: operations,
 	})
 
@@ -155,7 +174,7 @@ func resourceAwsApiGatewayMethodResponseUpdate(d *schema.ResourceData, meta inte
 
 	log.Printf("[DEBUG] Received API Gateway Method: %s", out)
 
-	return resourceAwsApiGatewayMethodResponseRead(d, meta)
+	return resourceAwsApiGatewayMethodRead(d, meta)
 }
 
 func resourceAwsApiGatewayMethodResponseDelete(d *schema.ResourceData, meta interface{}) error {
