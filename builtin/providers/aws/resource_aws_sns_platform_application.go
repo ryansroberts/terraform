@@ -104,9 +104,6 @@ func resourceAwsSnsPlatformApplicationAPNSUpdate(d *schema.ResourceData, meta in
 
 	log.Printf("[DEBUG] Received GCM platform application: %s", resp)
 
-	d.Set("platform_credential", resp.Attributes["PlatformCredential"])
-	d.Set("platform_principal", resp.Attributes["PlatformPrincipal"])
-
 	return nil
 }
 
