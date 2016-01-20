@@ -23,7 +23,7 @@ func resourceAwsSnsPlatformApplicationAPNS() *schema.Resource {
 			},
 			"type": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: false,
+				Required: true,
 				ValidateFunc: func(v interface{}, k string) (ws []string, errors []error) {
 					value := v.(string)
 					if value != "SANDBOX" && value != "VOIP" {
