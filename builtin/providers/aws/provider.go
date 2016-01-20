@@ -207,6 +207,8 @@ func Provider() terraform.ResourceProvider {
 			"aws_sqs_queue":                        resourceAwsSqsQueue(),
 			"aws_sns_topic":                        resourceAwsSnsTopic(),
 			"aws_sns_topic_subscription":           resourceAwsSnsTopicSubscription(),
+			"aws_sns_platform_application_gcm":     resourceAwsSnsPlatformApplicationGCM(),
+			"aws_sns_platform_application_apns":    resourceAwsSnsPlatformApplicationAPNS(),
 			"aws_subnet":                           resourceAwsSubnet(),
 			"aws_volume_attachment":                resourceAwsVolumeAttachment(),
 			"aws_vpc_dhcp_options_association":     resourceAwsVpcDhcpOptionsAssociation(),
