@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/codecommit"
 	"github.com/aws/aws-sdk-go/service/codedeploy"
+	"github.com/aws/aws-sdk-go/service/cognitoidentity"
 	"github.com/aws/aws-sdk-go/service/directoryservice"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -68,6 +69,7 @@ type AWSClient struct {
 	cloudtrailconn     *cloudtrail.CloudTrail
 	cloudwatchconn     *cloudwatch.CloudWatch
 	cloudwatchlogsconn *cloudwatchlogs.CloudWatchLogs
+	cognitoidconn      *cognitoidentity.CognitoIdentity
 	dsconn             *directoryservice.DirectoryService
 	dynamodbconn       *dynamodb.DynamoDB
 	ec2conn            *ec2.EC2
@@ -227,6 +229,9 @@ func (c *Config) Client() (interface{}, error) {
 
 		log.Println("[INFO] Initializing CloudWatch Logs connection")
 		client.cloudwatchlogsconn = cloudwatchlogs.New(sess)
+
+		log.Println("[INFO] Initializing Cognito identity ")
+		client.cognitoidconn = cognitoidentity.New(sess)
 
 		log.Println("[INFO] Initializing OpsWorks Connection")
 		client.opsworksconn = opsworks.New(usEast1Sess)

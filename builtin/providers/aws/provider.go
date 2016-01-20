@@ -115,6 +115,8 @@ func Provider() terraform.ResourceProvider {
 			"aws_cloudformation_stack":             resourceAwsCloudFormationStack(),
 			"aws_cloudtrail":                       resourceAwsCloudTrail(),
 			"aws_cloudwatch_log_group":             resourceAwsCloudWatchLogGroup(),
+			"aws_cognitoidentity_pool":             resourceAwsCognitoIdentityPool(),
+			"aws_cognitoidentity_pool_roles":       resourceAwsCognitoIdentityPoolRoles(),
 			"aws_autoscaling_lifecycle_hook":       resourceAwsAutoscalingLifecycleHook(),
 			"aws_cloudwatch_metric_alarm":          resourceAwsCloudWatchMetricAlarm(),
 			"aws_codedeploy_app":                   resourceAwsCodeDeployApp(),
