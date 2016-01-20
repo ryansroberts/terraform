@@ -36,6 +36,19 @@ func resourceAwsApiGatewayDeployment() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
+
+			"stage_description": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+
+			"variables": &schema.Schema{
+				Type:     schema.TypeMap,
+				Optional: true,
+				ForceNew: true,
+				Elem:     schema.TypeString,
+			},
 		},
 	}
 }
@@ -45,11 +58,18 @@ func resourceAwsApiGatewayDeploymentCreate(d *schema.ResourceData, meta interfac
 	// Create the gateway
 	log.Printf("[DEBUG] Creating API Gateway deployment")
 
+	variables := make(map[string]string)
+	for k, v := range d.Get("variables").(map[string]interface{}) {
+		variables[k] = v.(string)
+	}
+
 	var err error
 	resp, err := conn.CreateDeployment(&apigateway.CreateDeploymentInput{
-		RestApiId:   aws.String(d.Get("api_id").(string)),
-		StageName:   aws.String(d.Get("stage_name").(string)),
-		Description: aws.String(d.Get("description").(string)),
+		RestApiId:        aws.String(d.Get("api_id").(string)),
+		StageName:        aws.String(d.Get("stage_name").(string)),
+		Description:      aws.String(d.Get("description").(string)),
+		StageDescription: aws.String(d.Get("stage_description").(string)),
+		Variables:        aws.StringMap(variables),
 	})
 	if err != nil {
 		return fmt.Errorf("Error creating API Gateway deployment: %s", err)
@@ -87,6 +107,13 @@ func resourceAwsApiGatewayDeploymentDelete(d *schema.ResourceData, meta interfac
 
 	return resource.Retry(5*time.Minute, func() error {
 		log.Printf("[DEBUG] schema is %#v", d)
+		if _, err := conn.DeleteStage(&apigateway.DeleteStageInput{
+			StageName: aws.String(d.Get("stage_name").(string)),
+			RestApiId: aws.String(d.Get("api_id").(string)),
+		}); err == nil {
+			return nil
+		}
+
 		_, err := conn.DeleteDeployment(&apigateway.DeleteDeploymentInput{
 			DeploymentId: aws.String(d.Id()),
 			RestApiId:    aws.String(d.Get("api_id").(string)),

@@ -13,12 +13,12 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
-func resourceAwsApiGatewayMethod() *schema.Resource {
+func resourceAwsApiGatewayMethodResponse() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceAwsApiGatewayMethodCreate,
-		Read:   resourceAwsApiGatewayMethodRead,
-		Update: resourceAwsApiGatewayMethodUpdate,
-		Delete: resourceAwsApiGatewayMethodDelete,
+		Create: resourceAwsApiGatewayMethodResponseCreate,
+		Read:   resourceAwsApiGatewayMethodResponseRead,
+		Update: resourceAwsApiGatewayMethodResponseUpdate,
+		Delete: resourceAwsApiGatewayMethodResponseDelete,
 
 		Schema: map[string]*schema.Schema{
 			"api_id": &schema.Schema{
@@ -39,81 +39,79 @@ func resourceAwsApiGatewayMethod() *schema.Resource {
 				ForceNew: true,
 			},
 
-			"authorization": &schema.Schema{
+			"status_code": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
 
-			"api_key_required": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
-
-			"request_models": &schema.Schema{
+			"response_models": &schema.Schema{
 				Type:     schema.TypeMap,
 				Optional: true,
 				Elem:     schema.TypeString,
+			},
+			"response_headers": &schema.Schema{
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem:     schema.TypeBool,
 			},
 		},
 	}
 }
 
-func resourceAwsApiGatewayMethodCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceAwsApiGatewayMethodResponseCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).apigateway
 
 	models := make(map[string]string)
-	for k, v := range d.Get("request_models").(map[string]interface{}) {
+	for k, v := range d.Get("response_models").(map[string]interface{}) {
 		models[k] = v.(string)
 	}
 
-	parameters := make(map[string]bool)
-	if parameterData, ok := d.GetOk("request_parameters"); ok {
-		params := parameterData.(*schema.Set).List()
-		for k := range params {
-			parameters[params[k].(string)] = true
+	headers := make(map[string]bool)
+	if d.Get("response_headers") != nil {
+		v := d.Get("response_headers").(map[string]interface{})
+		for k, t := range v {
+			headers["method.response.header."+k] = (t).(bool)
 		}
 	}
 
-	_, err := conn.PutMethod(&apigateway.PutMethodInput{
-		AuthorizationType: aws.String(d.Get("authorization").(string)),
-		HttpMethod:        aws.String(d.Get("http_method").(string)),
-		ResourceId:        aws.String(d.Get("resource_id").(string)),
-		RestApiId:         aws.String(d.Get("api_id").(string)),
-		RequestModels:     aws.StringMap(models),
-		RequestParameters: nil,
-		ApiKeyRequired:    aws.Bool(d.Get("api_key_required").(bool)),
+	_, err := conn.PutMethodResponse(&apigateway.PutMethodResponseInput{
+		HttpMethod:         aws.String(d.Get("http_method").(string)),
+		ResourceId:         aws.String(d.Get("resource_id").(string)),
+		RestApiId:          aws.String(d.Get("api_id").(string)),
+		StatusCode:         aws.String(d.Get("status_code").(string)),
+		ResponseModels:     aws.StringMap(models),
+		ResponseParameters: aws.BoolMap(headers),
 	})
 	if err != nil {
-		return fmt.Errorf("Error creating API Gateway Method: %s", err)
+		return fmt.Errorf("Error creating API Gateway Method Response: %s", err)
 	}
 
-	d.SetId(fmt.Sprintf("%s-%s-%s", d.Get("api_id").(string), d.Get("resource_id").(string), d.Get("http_method").(string)))
+	d.SetId(fmt.Sprintf("%s-%s-%s-%s", d.Get("api_id").(string), d.Get("resource_id").(string), d.Get("http_method").(string), d.Get("status_code").(string)))
 	log.Printf("[DEBUG] API Gateway Method ID: %s", d.Id())
 
 	return nil
 }
 
-func resourceAwsApiGatewayMethodRead(d *schema.ResourceData, meta interface{}) error {
+func resourceAwsApiGatewayMethodResponseRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).apigateway
 
 	log.Printf("[DEBUG] Reading API Gateway Method %s", d.Id())
-	out, err := conn.GetMethod(&apigateway.GetMethodInput{
+	out, err := conn.GetMethodResponse(&apigateway.GetMethodResponseInput{
 		HttpMethod: aws.String(d.Get("http_method").(string)),
 		ResourceId: aws.String(d.Get("resource_id").(string)),
 		RestApiId:  aws.String(d.Get("api_id").(string)),
+		StatusCode: aws.String(d.Get("status_code").(string)),
 	})
 	if err != nil {
-		d.SetId("")
 		return err
 	}
 	log.Printf("[DEBUG] Received API Gateway Method: %s", out)
-	d.SetId(fmt.Sprintf("%s-%s-%s", d.Get("api_id").(string), d.Get("resource_id").(string), d.Get("http_method").(string)))
+	d.SetId(fmt.Sprintf("%s-%s-%s-%s", d.Get("api_id").(string), d.Get("resource_id").(string), d.Get("http_method").(string), d.Get("status_code").(string)))
 
 	return nil
 }
 
-func resourceAwsApiGatewayMethodUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceAwsApiGatewayMethodResponseUpdate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).apigateway
 
 	log.Printf("[DEBUG] Reading API Gateway Method %s", d.Id())
@@ -179,7 +177,7 @@ func resourceAwsApiGatewayMethodUpdate(d *schema.ResourceData, meta interface{})
 	return resourceAwsApiGatewayMethodRead(d, meta)
 }
 
-func resourceAwsApiGatewayMethodDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceAwsApiGatewayMethodResponseDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).apigateway
 	log.Printf("[DEBUG] Deleting API Gateway Method: %s", d.Id())
 
@@ -195,13 +193,18 @@ func resourceAwsApiGatewayMethodDelete(d *schema.ResourceData, meta interface{})
 	if o, n := d.GetChange("api_id"); o.(string) != n.(string) {
 		restApiID = o.(string)
 	}
+	statusCode := d.Get("status_code").(string)
+	if o, n := d.GetChange("status_code"); o.(string) != n.(string) {
+		statusCode = o.(string)
+	}
 
 	return resource.Retry(5*time.Minute, func() error {
 		log.Printf("[DEBUG] schema is %#v", d)
-		_, err := conn.DeleteMethod(&apigateway.DeleteMethodInput{
+		_, err := conn.DeleteMethodResponse(&apigateway.DeleteMethodResponseInput{
 			HttpMethod: aws.String(httpMethod),
 			ResourceId: aws.String(resourceId),
 			RestApiId:  aws.String(restApiID),
+			StatusCode: aws.String(statusCode),
 		})
 		if err == nil {
 			return nil
