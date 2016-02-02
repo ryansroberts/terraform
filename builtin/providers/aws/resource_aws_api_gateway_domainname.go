@@ -14,7 +14,6 @@ func resourceAwsApiGatewayDomain() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceAwsApiGatewayDomainCreate,
 		Read:   resourceAwsApiGatewayDomainRead,
-		Update: resourceAwsApiGatewayDomainUpdate,
 		Delete: resourceAwsApiGatewayDomainDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -43,6 +42,10 @@ func resourceAwsApiGatewayDomain() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"distribution_domain": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -63,6 +66,7 @@ func resourceAwsApiGatewayDomainCreate(d *schema.ResourceData, meta interface{})
 	}
 
 	d.SetId(*r.DomainName)
+	d.Set("distribution_domain", *r.DistributionDomainName)
 
 	return resourceAwsApiGatewayDomainRead(d, meta)
 }
@@ -83,15 +87,10 @@ func resourceAwsApiGatewayDomainRead(d *schema.ResourceData, meta interface{}) e
 	return nil
 }
 
-func resourceAwsApiGatewayDomainUpdate(d *schema.ResourceData, meta interface{}) error {
-	resourceAwsApiGatewayDomainDelete(d, meta)
-	return resourceAwsApiGatewayDomainCreate(d, meta)
-}
-
 func resourceAwsApiGatewayDomainDelete(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).apigateway
 
-	r, err := conn.DeleteDomainName(&apigateway.DeleteDomainNameInput{
+	_, err := conn.DeleteDomainName(&apigateway.DeleteDomainNameInput{
 		DomainName: aws.String(d.Get("domain_name").(string)),
 	})
 
@@ -99,7 +98,7 @@ func resourceAwsApiGatewayDomainDelete(d *schema.ResourceData, meta interface{})
 		return nil
 	}
 
-	awsErr, ok := err.(awserr.Error)
+	awsErr, _ := err.(awserr.Error)
 	if awsErr.Code() == "NotFoundException" {
 		return nil
 	}
