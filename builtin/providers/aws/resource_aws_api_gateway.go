@@ -34,6 +34,27 @@ func resourceAwsApiGateway() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+
+			"base_path_mapping": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"path": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"stage": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"domain_name": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -50,6 +71,24 @@ func resourceAwsApiGatewayCreate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	d.SetId(*(*gateway).Id)
+
+	if basepaths, ok := d.GetOk("base_path_mapping"); ok {
+		basepaths := basepaths.([]interface{})
+		for _, path := range basepaths {
+			path := path.(map[string]interface{})
+
+			_, err := conn.CreateBasePathMapping(&apigateway.CreateBasePathMappingInput{
+				RestApiId:  aws.String(d.Id()),
+				DomainName: aws.String(path["domain_name"].(string)),
+				BasePath:   aws.String(path["path"].(string)),
+				Stage:      aws.String(path["stage"].(string)),
+			})
+
+			if err != nil {
+				return fmt.Errorf("Error creating Gateway base path mapping: %s", err)
+			}
+		}
+	}
 
 	return resourceAwsApiGatewayRefreshResources(d, meta)
 }
