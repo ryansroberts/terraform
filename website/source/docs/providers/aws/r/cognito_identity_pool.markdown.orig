@@ -6,6 +6,8 @@
  +  Provides a Cognito Identity Pool.
  +---
  +
+<<<<<<< Updated upstream
+=======
 
 # aws\_cognito\_identity\_pool
 
@@ -39,3 +41,4 @@ The following attributes are exported:
 
 * `id` - The ARN of the platform application
 
+>>>>>>> Stashed changes

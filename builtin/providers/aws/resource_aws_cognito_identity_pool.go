@@ -2,17 +2,10 @@ package aws
 
 import (
 	"fmt"
-	//"io/ioutil"
 	"log"
-	//"strings"
-	//"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	//"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cognitoidentity"
-	//"github.com/mitchellh/go-homedir"
-
-	//"errors"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
