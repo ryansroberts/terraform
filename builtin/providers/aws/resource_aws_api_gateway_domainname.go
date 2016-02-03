@@ -94,15 +94,12 @@ func resourceAwsApiGatewayDomainDelete(d *schema.ResourceData, meta interface{})
 		DomainName: aws.String(d.Get("domain_name").(string)),
 	})
 
-	if err == nil {
-		return nil
+	if err != nil {
+		if err, ok := err.(awserr.Error); ok && err.Code() == "NotFound" {
+			return nil
+		}
+		return fmt.Errorf("Error deleting domain name %s", err)
 	}
-
-	awsErr, _ := err.(awserr.Error)
-	if awsErr.Code() == "NotFoundException" {
-		return nil
-	}
-
-	return fmt.Errorf("Error Deleting Gateway Domain Name: %s", err)
+	return nil
 
 }
