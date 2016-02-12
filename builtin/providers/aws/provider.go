@@ -109,6 +109,7 @@ func Provider() terraform.ResourceProvider {
 			"aws_ami_from_instance":                resourceAwsAmiFromInstance(),
 			"aws_api_gateway":                      resourceAwsApiGateway(),
 			"aws_api_gateway_api_key":              resourceAwsApiGatewayApiKey(),
+			"aws_api_gateway_base_path_mapping":    resourceAwsApiGatewayBasePathMapping(),
 			"aws_api_gateway_domain":               resourceAwsApiGatewayDomain(),
 			"aws_api_gateway_model":                resourceAwsApiGatewayModel(),
 			"aws_api_gateway_resource":             resourceAwsApiGatewayResource(),

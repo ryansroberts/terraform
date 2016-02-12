@@ -2,10 +2,13 @@ package aws
 
 import (
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/apigateway"
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -53,20 +56,33 @@ func resourceAwsApiGatewayDomain() *schema.Resource {
 func resourceAwsApiGatewayDomainCreate(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).apigateway
 
-	r, err := conn.CreateDomainName(&apigateway.CreateDomainNameInput{
-		DomainName:            aws.String(d.Get("domain_name").(string)),
-		CertificateName:       aws.String(d.Get("certificate_name").(string)),
-		CertificateBody:       aws.String(d.Get("certificate_body").(string)),
-		CertificateChain:      aws.String(d.Get("certificate_chain").(string)),
-		CertificatePrivateKey: aws.String(d.Get("certificate_private_key").(string)),
+	//Domain link with cloudfront distribution can take a while to actually delete
+	err := resource.Retry(4*time.Minute, func() error {
+		r, err := conn.CreateDomainName(&apigateway.CreateDomainNameInput{
+			DomainName:            aws.String(d.Get("domain_name").(string)),
+			CertificateName:       aws.String(d.Get("certificate_name").(string)),
+			CertificateBody:       aws.String(d.Get("certificate_body").(string)),
+			CertificateChain:      aws.String(d.Get("certificate_chain").(string)),
+			CertificatePrivateKey: aws.String(d.Get("certificate_private_key").(string)),
+		})
+
+		if err != nil {
+			log.Printf("[DEBUG] Error creating domain - not found : %s", err)
+			if err, ok := err.(awserr.Error); ok && err.Code() != "BadRequestException" {
+				return nil
+			}
+			return fmt.Errorf("Error creating domain name %s", err)
+		}
+
+		d.SetId(*r.DomainName)
+		d.Set("distribution_domain", *r.DistributionDomainName)
+
+		return nil
 	})
 
 	if err != nil {
-		return fmt.Errorf("Error creating API Gateway Domain: %s", err)
+		return fmt.Errorf("Error creating domain name %s", err)
 	}
-
-	d.SetId(*r.DomainName)
-	d.Set("distribution_domain", *r.DistributionDomainName)
 
 	return resourceAwsApiGatewayDomainRead(d, meta)
 }
@@ -74,15 +90,16 @@ func resourceAwsApiGatewayDomainCreate(d *schema.ResourceData, meta interface{})
 func resourceAwsApiGatewayDomainRead(d *schema.ResourceData, meta interface{}) error {
 	conn := meta.(*AWSClient).apigateway
 
-	r, err := conn.GetDomainName(&apigateway.GetDomainNameInput{
-		DomainName: aws.String(d.Get("domain_name").(string)),
+	_, err := conn.GetDomainName(&apigateway.GetDomainNameInput{
+		DomainName: aws.String(d.Id()),
 	})
 
 	if err != nil {
-		return fmt.Errorf("Error creating API Gateway Domain: %s", err)
+		if err, ok := err.(awserr.Error); ok && err.Code() == "NotFound" {
+			return nil
+		}
+		return fmt.Errorf("Error reading api gateway domain %s", err)
 	}
-
-	d.Set("certificate_name", *r.CertificateName)
 
 	return nil
 }
