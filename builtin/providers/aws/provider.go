@@ -139,6 +139,8 @@ func Provider() terraform.ResourceProvider {
 			"aws_codedeploy_app":                           resourceAwsCodeDeployApp(),
 			"aws_codedeploy_deployment_group":              resourceAwsCodeDeployDeploymentGroup(),
 			"aws_codecommit_repository":                    resourceAwsCodeCommitRepository(),
+			"aws_cognitoidentity_pool":                     resourceAwsCognitoIdentityPool(),
+			"aws_cognitoidentity_pool_roles":               resourceAwsCognitoIdentityPoolRoles(),
 			"aws_customer_gateway":                         resourceAwsCustomerGateway(),
 			"aws_db_instance":                              resourceAwsDbInstance(),
 			"aws_db_parameter_group":                       resourceAwsDbParameterGroup(),
